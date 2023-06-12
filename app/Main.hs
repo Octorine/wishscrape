@@ -8,7 +8,6 @@ import Data.Aeson as Aeson
     Value,
     fromJSON,
   )
-import Network.URI.Encode (encode)
 import Data.Aeson.KeyMap as Keymap ()
 import Data.ByteString.Lazy as BS (writeFile)
 import Data.Csv as Csv
@@ -30,22 +29,25 @@ import Network.HTTP.Simple
     httpJSON,
     parseRequest,
   )
-import Text.Printf
+import Network.URI.Encode (encode)
 
 main :: IO ()
 main = do
   print "Please enter a Steam username:"
   username <- getLine
-  request <- parseRequest $ ("https://store.steampowered.com/wishlist/id/"
-                                ++ encode username
-                                ++ "/wishlistdata")
+  request <-
+    parseRequest $
+      ( "https://store.steampowered.com/wishlist/id/"
+          ++ encode username
+          ++ "/wishlistdata"
+      )
   response <- httpJSON request
   let wl = fromJSON $ getResponseBody response :: Result Wishlist
 
   case wl of
     Success (Wishlist wl) -> do
       -- for debugging
-      -- mapM_ printWlItem $ M.elems wl
+      -- mapM_ print $ M.elems wl
       print "Wriing Wishlist File."
       BS.writeFile "wishlist.csv" . encodeDefaultOrderedByName $ makeItem <$> M.elems wl
       print "Done."
@@ -80,17 +82,6 @@ data Subs = Subs
 instance FromJSON Subs
 
 wlItems (Wishlist wl) = M.elems wl
-
-printWlItem item =
-  printf "Name = %s\n\tPrice = %s\tDiscount = %s\n" 
-  (name item)
-  (if V.null (subs item)
-    then "No Price"
-    else
-      price (subs item V.! 0))
-  (if V.null (subs item)
-   then "No Discount"
-   else show (discount_pct (subs item V.! 0)))
 
 data Output = Output
   { oName :: String,
