@@ -8,6 +8,7 @@ import Data.Aeson as Aeson
     Value,
     fromJSON,
   )
+import Data.Char (isDigit)
 import Data.Aeson.KeyMap as Keymap ()
 import Data.ByteString.Lazy as BS (writeFile)
 import Data.Csv as Csv
@@ -94,9 +95,24 @@ instance ToNamedRecord Output where
   toNamedRecord o =
     namedRecord
       [ "Name" Csv..= oName o,
-        "Price" Csv..= oPrice o,
-        "Discount" Csv..= oDiscount o
+        "Price" Csv..= convertCurrency (oPrice o),
+        "Discount" Csv..=  convertPercent (oDiscount o)
       ]
+
+
+convertCurrency :: String -> String
+convertCurrency pennies =
+  if not (null pennies) && all isDigit pennies then
+    let cents = reverse . take 2 . reverse $ pennies
+        dollars = reverse . drop 2 . reverse $ pennies
+    in dollars <> "." <> cents
+  else pennies
+
+convertPercent :: String -> String
+convertPercent pc
+  | pc == "0" = ""
+  | not (null pc) && all isDigit pc = pc <> "%"
+  | otherwise = pc
 
 instance DefaultOrdered Output where
   headerOrder _ = header ["Name", "Price", "Discount"]
